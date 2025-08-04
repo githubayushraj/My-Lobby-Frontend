@@ -31,7 +31,7 @@ export default function HomePage() {
   // --- GSAP Animations ---
   useEffect(() => {
     // Animate the title with a typewriter effect
-    const fullTitle = "NEXT-GEN";
+    const fullTitle = "MY-LOBBY";
     const tl = gsap.timeline({ repeat: -1, repeatDelay: 2 });
     tl.to(titleRef.current, {
       duration: fullTitle.length * 0.15,
