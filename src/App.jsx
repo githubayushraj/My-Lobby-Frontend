@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import HomePage from "./components/homePage";
-import StreamPage from "./components/streamPage";
+import HomePage from "./components/HomePage";
+import StreamPage from "./components/StreamPage";
 
 
 function App() {
