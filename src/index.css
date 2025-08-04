@@ -1,9 +1,11 @@
-@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 
 /* --- Google Font Import --- */
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
-
 /* --- Root Variables and Base Styles --- */
 :root {
   --blue-glow: #3b82f6;
