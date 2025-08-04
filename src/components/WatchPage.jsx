@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import gsap from "gsap";
 
-export default function watchPage() {
+export default function WatchPage() {
   const [searchParams] = useSearchParams();
   const roomId = searchParams.get("roomId");
 
