@@ -20,30 +20,31 @@ function VideoPlayer({ stream, muted, label }) {
 }
 
 export default function StreamPage() {
-  const { roomId, userId } = useParams(); // Get room/user ID from URL
+  const { roomId, userId } = useParams();
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState(new Map());
 
-  // Refs to hold WebSocket, PeerConnections, and local stream without causing re-renders
   const ws = useRef(null);
   const peerConnections = useRef(new Map());
   const localStreamRef = useRef(null);
 
-  // Helper to send messages to the signaling server
   const send = useCallback((message) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(message));
     }
   }, []);
 
-  // Creates and configures a new PeerConnection
-  const createPeerConnection = useCallback((remoteUserId, isProducer) => {
+  const createPeerConnection = useCallback((remoteUserId) => {
     console.log(`-- Creating PeerConnection for: ${remoteUserId}`);
+    if (peerConnections.current.has(remoteUserId)) {
+      return peerConnections.current.get(remoteUserId);
+    }
+    
     const pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_SERVER }] });
 
     pc.onicecandidate = event => {
       if (event.candidate) {
-        // Send ICE candidate to the other peer via the signaling server
+        console.log(`... Sending ICE candidate to ${remoteUserId}`);
         send({ type: 'ice_candidate', payload: { remoteUserId, candidate: event.candidate } });
       }
     };
@@ -51,7 +52,6 @@ export default function StreamPage() {
     pc.onconnectionstatechange = () => {
       console.log(`-- PeerConnection [${remoteUserId}] state changed to: ${pc.connectionState}`);
       if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-        // Clean up on failure or closure
         peerConnections.current.delete(remoteUserId);
         setRemoteStreams(prev => {
           const newStreams = new Map(prev);
@@ -60,19 +60,17 @@ export default function StreamPage() {
         });
       }
     };
+    
+    // Add local tracks to send to the other peer
+    localStreamRef.current?.getTracks().forEach(track => {
+        pc.addTrack(track, localStreamRef.current);
+    });
 
-    if (isProducer) {
-        // If we are producing, add our local tracks to the connection
-        localStreamRef.current?.getTracks().forEach(track => {
-            pc.addTrack(track, localStreamRef.current);
-        });
-    } else {
-        // If we are consuming, listen for tracks from the remote peer
-        pc.ontrack = (event) => {
-            console.log(`✅ TRACK RECEIVED from: ${remoteUserId}`);
-            setRemoteStreams(prev => new Map(prev).set(remoteUserId, event.streams[0]));
-        };
-    }
+    // Handle receiving tracks from the other peer
+    pc.ontrack = (event) => {
+        console.log(`✅✅✅ TRACK RECEIVED from: ${remoteUserId} ✅✅✅`);
+        setRemoteStreams(prev => new Map(prev).set(remoteUserId, event.streams[0]));
+    };
 
     peerConnections.current.set(remoteUserId, pc);
     return pc;
@@ -82,84 +80,78 @@ export default function StreamPage() {
   useEffect(() => {
     if (!roomId || !userId) return;
 
-    // Start getting local media as soon as the component loads
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
         setLocalStream(stream);
         localStreamRef.current = stream;
-
-        // Establish WebSocket connection ONLY after getting media
         ws.current = new WebSocket(WEBSOCKET_URL);
 
         ws.current.onopen = () => {
           console.log("✅ WebSocket connected");
-          // Join the room once connected
           send({ type: 'join', payload: { roomId, userId } });
         };
 
         ws.current.onmessage = async (event) => {
           const { type, payload } = JSON.parse(event.data);
-          console.log(`⬇️ Received message: ${type}`, payload);
+          // Use a detailed log to see the raw data
+          console.log(`⬇️ Message received: type=${type}, payload=`, payload);
 
           let pc;
+          const remoteUserId = payload.userId; // Get the sender's ID
 
           switch (type) {
-            // Server tells us who is already in the room
             case 'existing_participants': {
               const { userIds } = payload;
-              // For each existing user, create a PeerConnection and send an offer
-              for (const remoteUserId of userIds) {
-                pc = createPeerConnection(remoteUserId, true);
+              console.log(`... This room has existing participants:`, userIds);
+              for (const existingUserId of userIds) {
+                pc = createPeerConnection(existingUserId); 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-                send({ type: 'offer', payload: { remoteUserId, sdp: pc.localDescription } });
+                console.log(`... Sending offer to existing user: ${existingUserId}`);
+                send({ type: 'offer', payload: { remoteUserId: existingUserId, sdp: pc.localDescription } });
               }
               break;
             }
 
-            // A new user has joined the room
             case 'new_participant': {
-              const { userId: remoteUserId } = payload;
-              console.log(`A new user joined: ${remoteUserId}`);
-              // We don't do anything yet; the new user will send us an offer
+              console.log(`... A new user joined: ${remoteUserId}. Waiting for their offer.`);
               break;
             }
 
-            // We received an offer from a new participant
             case 'offer': {
-                const { userId: remoteUserId, sdp } = payload;
-                pc = createPeerConnection(remoteUserId, false);
-                await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+                console.log(`... Received offer from: ${remoteUserId}`);
+                pc = createPeerConnection(remoteUserId); 
+                await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
+                console.log(`... Sending answer to: ${remoteUserId}`);
                 send({ type: 'answer', payload: { remoteUserId, sdp: pc.localDescription } });
                 break;
             }
 
-            // We received an answer to our offer
             case 'answer': {
-              const { userId: remoteUserId, sdp } = payload;
+              console.log(`... Received answer from: ${remoteUserId}`);
               pc = peerConnections.current.get(remoteUserId);
               if (pc) {
-                await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+                await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
               }
               break;
             }
 
-            // We received an ICE candidate from a peer
             case 'ice_candidate': {
-              const { userId: remoteUserId, candidate } = payload;
+              console.log(`... Received ICE candidate from: ${remoteUserId}`);
               pc = peerConnections.current.get(remoteUserId);
-              if (pc && candidate) {
-                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              // Strengthened race condition guard
+              if (pc && pc.remoteDescription && payload.candidate) {
+                await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+              } else {
+                 console.warn(`... Could not add ICE candidate for ${remoteUserId}. PC not ready or candidate missing.`);
               }
               break;
             }
             
-            // A user has left the room
             case 'participant_left': {
-                const { userId: remoteUserId } = payload;
-                console.log(`User left: ${remoteUserId}`);
+                console.log(`... User left: ${remoteUserId}`);
                 peerConnections.current.get(remoteUserId)?.close();
                 peerConnections.current.delete(remoteUserId);
                 setRemoteStreams(prev => {
@@ -171,19 +163,18 @@ export default function StreamPage() {
             }
 
             default:
-              console.warn('Unknown message type:', type);
+              console.warn('... Unknown message type:', type);
           }
         };
 
-        ws.current.onerror = (error) => console.error('WebSocket error:', error);
-        ws.current.onclose = () => console.log('WebSocket closed');
+        ws.current.onerror = (error) => console.error('❌ WebSocket error:', error);
+        ws.current.onclose = () => console.log('❌ WebSocket closed');
       })
       .catch(err => {
-        console.error('Failed to get local stream', err);
+        console.error('❌ Failed to get local stream', err);
         alert('Could not access your camera or microphone.');
       });
 
-    // Cleanup function when the component unmounts
     return () => {
       console.log("Cleaning up component...");
       ws.current?.close();
