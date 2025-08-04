@@ -19,7 +19,7 @@ function VideoPlayer({ stream, muted, label }) {
   );
 }
 
-export default function streamPage() {
+export default function StreamPage() {
   const { roomId, userId } = useParams();
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState(new Map());

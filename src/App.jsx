@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import HomePage from "./components/homePage";
 import StreamPage from "./components/streamPage";
-import WatchPage from "./components/watchPage";
 
 
 function App() {

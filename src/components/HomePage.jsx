@@ -11,7 +11,7 @@ gsap.registerPlugin(TextPlugin);
 const glowingButtonStyles = "relative px-8 py-4 font-bold text-white transition-all duration-300 ease-in-out rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 overflow-hidden";
 const glowingButtonPseudo = "absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse";
 
-export default function homePage() {
+export default function HomePage() {
   const navigate = useNavigate();
 
   // --- State Management ---
