@@ -127,7 +127,7 @@ export default function HomePage() {
   const handleCreateMeeting = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://13.203.222.11:8080/api/meetings/create', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/meetings/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: 'New Cloud Meeting' }),
@@ -166,7 +166,7 @@ export default function HomePage() {
     setIsLoading(true);
     setJoinError('');
     try {
-      const response = await fetch(`http://13.203.222.11:8080/api/meetings/join/${joinRoomId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/meetings/join/${joinRoomId}`);
 
       if (response.status === 404) {
         setJoinError('Invalid Room ID. Please check the ID and try again.');
