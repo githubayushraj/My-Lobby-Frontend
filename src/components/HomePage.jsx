@@ -278,17 +278,6 @@ export default function HomePage() {
             </div>
         </div>
       )}
-
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-25px); } }
-        .animate-float { animation: float 10s ease-in-out infinite; }
-        @keyframes breath { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.03); opacity: 1; } }
-        .animate-breath { animation: breath 4s ease-in-out infinite; }
-        @keyframes dash { to { stroke-dashoffset: -20; } }
-        .animate-dash { animation: dash 1s linear infinite; }
-      `}</style>
     </div>
   );
 }
