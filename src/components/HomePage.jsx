@@ -127,6 +127,7 @@ export default function HomePage() {
   const handleCreateMeeting = async () => {
     setIsLoading(true);
     try {
+      // CORRECTED API URL
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/meetings/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -166,6 +167,7 @@ export default function HomePage() {
     setIsLoading(true);
     setJoinError('');
     try {
+      // CORRECTED API URL
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/meetings/join/${joinRoomId}`);
 
       if (response.status === 404) {
