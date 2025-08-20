@@ -4,7 +4,7 @@ import { Video, VideoOff, Mic, MicOff, ScreenShare, XCircle } from 'lucide-react
 
 // STUN & signaling URLs
 const STUN_SERVER   = 'stun:stun.l.google.com:19302';
-const WEBSOCKET_URL = 'ws://lobby.myshopflix.in/signaling';
+const WEBSOCKET_URL = 'wss://lobby.myshopflix.in/signaling';
 
 // gradient from screenshot (#9dd6ff → #53a5fd)
 const BG_GRADIENT   = 'bg-gradient-to-br from-[#9dd6ff] to-[#53a5fd]';
