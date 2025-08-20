@@ -8,7 +8,7 @@ const WEBSOCKET_URL = 'ws://lobby.myshopflix.in/signaling';
 
 // gradient from screenshot (#9dd6ff → #53a5fd)
 const BG_GRADIENT   = 'bg-gradient-to-br from-[#9dd6ff] to-[#53a5fd]';
-ws
+
 // Layout component
 function VideoGridLayout({ children }) {
   const count = React.Children.count(children);
