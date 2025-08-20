@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Video, VideoOff, Mic, MicOff, ScreenShare, XCircle } from 'lucide-react';
 
 // STUN & signaling URLs
-const STUN_SERVER   = 'stun:stun..google.com:19302';
+const STUN_SERVER   = 'stun:stun.l.google.com:19302'; // CHANGED: Corrected typo from "stun.." to "stun.l."
 const WEBSOCKET_URL = 'wss://webrtc.myshopflix.in/signaling';
 
 // gradient from screenshot (#9dd6ff → #53a5fd)
@@ -91,6 +91,7 @@ export default function StreamPage() {
   const ws               = useRef(null);
   const peerConnections  = useRef(new Map());
   const localStreamRef   = useRef(null);
+  const cameraStreamRef  = useRef(null); // NEW: Ref to permanently store the original camera stream
 
   // send wrapper
   const send = useCallback((msg) => {
@@ -165,15 +166,24 @@ export default function StreamPage() {
       await handleStopScreenShare();
     }
   };
+
+  // CHANGED: This function now reuses the original camera stream instead of creating a new one.
   const handleStopScreenShare = async () => {
     try {
+      // Stop the screen sharing tracks
       localStreamRef.current.getTracks().forEach(t => t.stop());
-      const camera = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+      // Get the original camera stream from the ref where we saved it
+      const camera = cameraStreamRef.current;
       const camTrack = camera.getVideoTracks()[0];
+
+      // Replace the screen track with the camera track in all peer connections
       peerConnections.current.forEach(pc => {
         const sender = pc.getSenders().find(s => s.track.kind === 'video');
         sender?.replaceTrack(camTrack);
       });
+
+      // Update state to render the camera stream and point the main ref back to it
       setLocalStream(camera);
       localStreamRef.current = camera;
       setIsSharingScreen(false);
@@ -187,6 +197,8 @@ export default function StreamPage() {
     ws.current?.close();
     ws.current = null;
     localStreamRef.current?.getTracks().forEach(t => t.stop());
+    // NEW: Also stop the saved camera stream just in case it's different
+    cameraStreamRef.current?.getTracks().forEach(t => t.stop());
     peerConnections.current.forEach(pc => pc.close());
     peerConnections.current.clear();
     navigate('/');
@@ -201,6 +213,7 @@ export default function StreamPage() {
       .then(stream => {
         setLocalStream(stream);
         localStreamRef.current = stream;
+        cameraStreamRef.current = stream; // NEW: Save the original camera stream permanently
 
         ws.current = new WebSocket(WEBSOCKET_URL);
         ws.current.onopen = () => send({ type: 'join', payload: { roomId, userId } });
